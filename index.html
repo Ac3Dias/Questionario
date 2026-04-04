@@ -23,12 +23,31 @@
             position: relative;
         }
         
-        .welcome, .page {
+        .welcome {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 2rem 1rem;
+        }
+        
+        .page {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 5vh 1rem 10vh;
+        }
+        
+        .page-inner {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            margin-top: 0;
         }
         
         .card {
@@ -38,6 +57,24 @@
             border-radius: 16px;
             padding: 2rem;
             box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        
+        .bottom-bar {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 5vh;
+            width: min(600px, calc(100% - 2rem));
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .top-bar {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 24px;
         }
         
         .welcome-inner {
@@ -318,6 +355,16 @@
         .detail-ans { font-size: 0.78rem; min-width: 120px; text-align: right; }
         .dot { color: #d4800a; font-size: 0.7rem; margin-top: 3px; }
         
+        @media print {
+            body { background: white; color: black; }
+            .root, .page, .card { box-shadow: none !important; background: white !important; }
+            .btn, .back-btn, .ghost-btn, .admin-link { display: none !important; }
+            .score-circle { box-shadow: none; }
+            .detail-grid { max-height: none; overflow: visible; }
+            .page { padding: 0; }
+            .card { margin: 0; border-radius: 0; }
+        }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         
@@ -454,9 +501,9 @@
                 root.innerHTML = `
                     <div class="welcome">
                         <div class="card welcome-inner">
-                            <div class="logo">AQ</div>
-                            <h1>Quociente do Espectro do Autismo</h1>
-                            <p class="subtitle">Este questionário mede o grau de traços autísticos em adultos. Não é um autodiagnóstico — seu objetivo é identificar traços que podem estar ligados ao comportamento autista.</p>
+                            <div class="logo">Olá!</div>
+                            <h1>Teste de Personalidade</h1>
+                            <p class="subtitle">Este questionário busca identificar qual é o seu tipo de personalidade.</p>
                             <p class="note">São 50 perguntas. Responda com sinceridade.</p>
                             <button class="btn" onclick="app.setState({page: 'name'})">Iniciar questionário →</button>
                         </div>
@@ -513,24 +560,26 @@
                 
                 root.innerHTML = `
                     <div class="page">
-                        <div class="top-bar">
+                        <div class="page-inner">
+                            <div class="card ${this.anim === 'in' ? 'fade-in' : 'fade-out'}">
+                                <div class="q-number">Pergunta ${q.id}</div>
+                                <p class="q-text">${q.text}</p>
+                                <div class="option-grid">
+                                    ${OPTIONS.map(opt => `
+                                        <button class="option-btn ${this.answers[q.id] === opt.value ? 'selected' : ''}"
+                                            onclick="app.chooseAnswer('${opt.value}')">
+                                            ${opt.label}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                                ${this.current > 0 ? `<button class="back-btn" onclick="app.goBack()">← Voltar</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="bottom-bar">
                             <div class="progress-track">
                                 <div class="progress-fill" style="width: ${progress}%"></div>
                             </div>
                             <span class="progress-text">${this.current + 1} / ${questions.length}</span>
-                        </div>
-                        <div class="card ${this.anim === 'in' ? 'fade-in' : 'fade-out'}">
-                            <div class="q-number">Pergunta ${q.id}</div>
-                            <p class="q-text">${q.text}</p>
-                            <div class="option-grid">
-                                ${OPTIONS.map(opt => `
-                                    <button class="option-btn ${this.answers[q.id] === opt.value ? 'selected' : ''}"
-                                        onclick="app.chooseAnswer('${opt.value}')">
-                                        ${opt.label}
-                                    </button>
-                                `).join('')}
-                            </div>
-                            ${this.current > 0 ? `<button class="back-btn" onclick="app.goBack()">← Voltar</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -578,7 +627,10 @@
                                     : 'Sua pontuação está dentro do intervalo típico da população geral.'}
                             </p>
                             <p style="font-size: 0.85rem; margin-top: 16px; color: #2e8b57;">✓ Respostas sendo registradas...</p>
-                            <button class="btn" style="margin-top: 28px;" onclick="app.setState({page: 'welcome', current: 0, answers: {}, name: '', email: ''})">Responder novamente</button>
+                            <div style="display:flex; gap: 10px; justify-content:center; flex-wrap: wrap; margin-top: 24px;">
+                                <button class="btn" onclick="app.exportPdf()">Exportar para PDF</button>
+                                <button class="btn" style="margin-top: 0;" onclick="app.setState({page: 'welcome', current: 0, answers: {}, name: '', email: ''})">Responder novamente</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -596,6 +648,10 @@
                         date: new Date().toISOString(),
                     });
                 } catch (e) { console.error(e); }
+            },
+            
+            exportPdf() {
+                window.print();
             },
             
             async loadResponses() {
